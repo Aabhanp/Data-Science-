@@ -1,0 +1,72 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+# Load Dataset
+dataset_url = "https://raw.githubusercontent.com/uiuc-cse/data-fa14/gh-pages/data/iris.csv"
+iris = pd.read_csv(dataset_url)
+
+# Data Preprocessing
+le = LabelEncoder()
+iris['species'] = le.fit_transform(iris['species'])
+X = iris.drop(columns=['species'])
+y = iris['species']
+
+# Train-Test Split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Feature Scaling
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Models Dictionary
+models = {
+    "Random Forest": RandomForestClassifier(n_estimators=100, random_state=42),
+    "Logistic Regression": LogisticRegression(),
+    "Decision Tree": DecisionTreeClassifier(random_state=42),
+    "Support Vector Machine": SVC(kernel='linear')
+}
+
+# Train and Evaluate Each Model
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"{name} Accuracy: {accuracy:.4f}")
+    print(f"Classification Report for {name}:\n", classification_report(y_test, y_pred))
+    
+    # Confusion Matrix Visualization
+    plt.figure(figsize=(5, 4))
+    sns.heatmap(confusion_matrix(y_test, y_pred), annot=True, cmap='Blues', fmt='d')
+    plt.xlabel("Predicted")
+    plt.ylabel("Actual")
+    plt.title(f"Confusion Matrix - {name}")
+    plt.show()
+
+# Feature Importance Analysis (For Tree-Based Models)
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
+feature_importances = rf_model.feature_importances_
+
+plt.figure(figsize=(6, 4))
+sns.barplot(x=feature_importances, y=X.columns, palette='viridis')
+plt.xlabel("Feature Importance")
+plt.ylabel("Features")
+plt.title("Feature Importance Analysis - Random Forest")
+plt.show()
+
+# Hyperparameter Tuning for SVM
+param_grid = {'C': [0.1, 1, 10], 'kernel': ['linear', 'rbf']}
+grid_search = GridSearchCV(SVC(), param_grid, cv=5, scoring='accuracy')
+grid_search.fit(X_train, y_train)
+print("Best parameters for SVM:", grid_search.best_params_)
+print("Best accuracy for SVM:", grid_search.best_score_)
